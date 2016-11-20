@@ -8,13 +8,6 @@ import './App.css';
 function RowContainer(props) {
   const cells = props.cells.map((cell, i) => {
     let className = cell === 0 ? 'cell cell-dead' : 'cell cell-alive';
-
-    if ((i === 0 || i === 9) || props.x === 0 || props.x === 9) {
-      className += ' edge';
-    } else {
-      className += ' grid-body';
-    }
-
     return (
       <div onClick={() => props.onMouseClick(props.x, i, cell, props.didStart)} key={i} className={className}></div>
     );
