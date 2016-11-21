@@ -26,7 +26,8 @@ function makeGrid() {
 const initialState = {
   grid: makeGrid(),
   didStart: false,
-  intervalId: null
+  intervalId: null,
+  records: []
 };
 
 function getNeighboringCells(grid, x, y) {
@@ -48,22 +49,35 @@ function getNeighboringCells(grid, x, y) {
 
 function updateState(prevState) {
   let { grid } = prevState;
+  let record = {};
   let newGrid = grid.map((row, x) => {
     return row.map((cell, y) => {
       let { live, dead } = getNeighboringCells(grid, x, y);
       if (!cell) {
-        return live === 3 ? 1 : 0;
+        cell = live === 3 ? 1 : 0;
       } else if (live < 2) {
-        return 0;
+        cell = 0;
       } else if (live < 4) {
-        return 1;
+        cell = 1;
       } else {
-        return 0;
+        cell = 0;
       }
+      if (cell) {
+        if (record[x]) {
+          record[x][y] = true;
+        } else {
+          record[x] = {[y]: true};
+        }
+      }
+      return cell;
     });
   });
+  let currentRecords = prevState.records;
+  if (currentRecords.length === 50) {
+    currentRecords = currentRecords.slice(1, currentRecords.length);
+  }
 
-  return Object.assign({}, prevState, { grid: newGrid });
+  return Object.assign({}, prevState, { grid: newGrid, records: [...currentRecords, record] });
 }
 
 function raiseDeadCell(state, {x, y, cell}) {
@@ -84,6 +98,30 @@ function raiseDeadCell(state, {x, y, cell}) {
   });
 }
 
+function restoreState(prevState, frame) {
+  let step = prevState.records[frame];
+  if (!step) {
+    // probably missing something, here...
+    return prevState;
+  }
+
+  return Object.assign({}, prevState, {
+    grid: prevState.grid.map((row, cx) => {
+      if (!step[cx]) {
+        return row;
+      }
+
+      return row.map((cell, cy) => {
+        if (step[cx][cy]) {
+          return 1;
+        }
+        return 0;
+      });
+    }),
+    didStart: false
+  })
+}
+
 export function gameState(state, action) {
   switch (action.type) {
     case '@@redux/INIT':
@@ -94,6 +132,8 @@ export function gameState(state, action) {
       return updateState(state, action.cell);
     case 'START':
       return raiseDeadCell(state, action);
+    case 'REWIND':
+      return restoreState(state, action.frame);
     default: return state;
   }
 }
@@ -103,7 +143,12 @@ export function gameProps(state, props) {
     return state;
   }
 
-  return { grid: state.grid, didStart: state.didStart, intervalId: state.intervalId };
+  return {
+    grid: state.grid,
+    didStart: state.didStart,
+    intervalId: state.intervalId,
+    records: state.records
+  };
 }
 
 export function gameDispatch(dispatch, props) {
@@ -118,6 +163,10 @@ export function gameDispatch(dispatch, props) {
 
     stopGame: () => {
       dispatch(actions.stop());
+    },
+
+    rewind: (frame) => {
+      dispatch(actions.rewind(frame));
     }
   };
 }

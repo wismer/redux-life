@@ -16,3 +16,10 @@ export function stop() {
     type: 'STOP'
   };
 }
+
+export function rewind(frame) {
+  return {
+    type: 'REWIND',
+    frame
+  };
+}

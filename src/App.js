@@ -9,7 +9,11 @@ function RowContainer(props) {
   const cells = props.cells.map((cell, i) => {
     let className = cell === 0 ? 'cell cell-dead' : 'cell cell-alive';
     return (
-      <div onClick={() => props.onMouseClick(props.x, i, cell, props.didStart)} key={i} className={className}></div>
+      <div
+        onClick={() => props.onMouseClick(props.x, i, cell)}
+        key={i}
+        className={className}>
+      </div>
     );
   });
   return (
@@ -42,10 +46,26 @@ class Grid extends React.Component {
 
   render() {
     const { props } = this;
-    const rows = props.grid.map((row, i) => <Row didStart={props.didStart} onMouseClick={props.onMouseClick} key={i} x={i} cells={row} />);
+    const rows = props.grid.map((row, i) => {
+      return (
+        <Row
+          didStart={props.didStart}
+          onMouseClick={props.onMouseClick}
+          key={i}
+          x={i}
+          cells={row}
+        />
+      );
+    });
+    const len = (props.records.length - 1).toString();
     return (
       <div className='game-of-life'>
         <button onClick={() => props.stopGame()}>STOP GAME</button>
+        <div>
+          STEP 0
+          <input type='range' defaultValue={len} min='0' max={len} onChange={(e) => props.rewind(e.target.value)} />
+          STEP {len}
+        </div>
         <div className='grid'>
           {rows}
         </div>
