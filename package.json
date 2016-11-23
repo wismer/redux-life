@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
+    "enzyme": "^2.6.0",
+    "jest-enzyme": "^2.0.0",
+    "react-addons-test-utils": "^15.4.0",
     "react-redux": "^4.4.6",
     "react-scripts": "0.7.0",
     "redux": "^3.6.0"
@@ -16,5 +19,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "jest": {
+    "setupTestFrameworkScriptFile": "node_modules/jest-enzyme/lib/index.js"
   }
 }

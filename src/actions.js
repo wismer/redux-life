@@ -1,11 +1,11 @@
-export function raiseDeadCell(x, y, cell, didStart) {
+export function start(x, y, cell, didStart) {
   return {
     type: 'START',
     x, y, cell, didStart
   };
 }
 
-export function updateState() {
+export function tick() {
   return {
     type: 'TICK'
   };
@@ -21,5 +21,11 @@ export function rewind(frame) {
   return {
     type: 'REWIND',
     frame
+  };
+}
+
+export function save() {
+  return {
+    type: 'SAVE'
   };
 }

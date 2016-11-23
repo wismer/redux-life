@@ -57,10 +57,13 @@ class Grid extends React.Component {
         />
       );
     });
+    const savedHash = props.savedHash ? <a href={`/#${props.savedHash}`}>RESTORE</a> : '';
     const len = (props.records.length - 1).toString();
     return (
       <div className='game-of-life'>
+        <button onClick={() => props.saveGame()}>SAVE GAME</button>
         <button onClick={() => props.stopGame()}>STOP GAME</button>
+        {savedHash}
         <div>
           STEP 0
           <input type='range' defaultValue={len} min='0' max={len} onChange={(e) => props.rewind(e.target.value)} />
