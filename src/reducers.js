@@ -18,7 +18,7 @@ function makeGrid() {
   let grid = [];
   let row = makeRow();
   for (var i = 0; i < 50; i++) {
-    grid.push(row.slice())
+    grid.push(row.slice());
   }
   return grid;
 }
@@ -28,6 +28,10 @@ const initialState = {
   didStart: false,
   intervalId: null,
   savedHash: window.location.hash.replace('#', ''),
+  isFetching: false,
+  isLoading: false,
+  didError: false,
+  errorMsg: null,
   records: []
 };
 
@@ -50,10 +54,9 @@ function getNeighboringCells(grid, x, y) {
 
 function tick(prevState) {
   let { grid } = prevState;
-  let record = {};
   let newGrid = grid.map((row, x) => {
     return row.map((cell, y) => {
-      let { live, dead } = getNeighboringCells(grid, x, y);
+      let { live } = getNeighboringCells(grid, x, y);
       if (!cell) {
         cell = live === 3 ? 1 : 0;
       } else if (live < 2) {
@@ -63,25 +66,16 @@ function tick(prevState) {
       } else {
         cell = 0;
       }
-      if (cell) {
-        if (record[x]) {
-          record[x][y] = true;
-        } else {
-          record[x] = {[y]: true};
-        }
-      }
       return cell;
     });
   });
-  let currentRecords = prevState.records;
-  if (currentRecords.length === 50) {
-    currentRecords = currentRecords.slice(1, currentRecords.length);
-  }
 
-  return Object.assign({}, prevState, { grid: newGrid, records: [...currentRecords, record] });
+
+
+  return Object.assign({}, prevState, { grid: newGrid });
 }
 
-function start(state, {x, y, cell}) {
+function start(state, {x, y}) {
   return Object.assign({}, state, {
     grid: state.grid.map((row, cx) => {
       if (cx >= (x - 1) && cx <= (x + 1)) {
@@ -120,31 +114,11 @@ function rewind(prevState, frame) {
       });
     }),
     didStart: false
-  })
+  });
 }
 
-function save(prevState, action) {
-  let { grid } = prevState;
-  let bigString = '';
-  for (let row of grid) {
-    bigString += row.join('');
-  }
-
-  let i = 0;
-  let encoded = '';
-  let blockNumber = 0;
-  while (i < 2500) {
-    let slice = parseInt(bigString.slice(i, i + 16), 2);
-    if (slice) {
-      let block = blockNumber.toString(16);
-      encoded += (block + "+" + slice.toString(16)) + '+';
-    }
-
-    i += 16;
-    blockNumber = i / 16;
-  }
-
-  return Object.assign({}, prevState, { savedHash: encoded, didStart: false });
+function saveStart(prevState) {
+  return Object.assign({}, prevState, { isLoading: true });
 }
 
 function padChunk(chunk) {
@@ -159,7 +133,7 @@ function restore(prevState) {
   let blocks = [];
   let chunks = [];
 
-  prevState.savedHash.split("+").forEach((data, idx) => {
+  prevState.savedHash.split('+').forEach((data, idx) => {
     if (idx % 2 === 0) {
       // block #
       blocks.push(parseInt(data, 16));
@@ -185,11 +159,18 @@ function restore(prevState) {
   }
   let grid = [];
   for (i = 0; i < 2500; i += 50) {
-    grid.push(str.slice(i, i + 50).split('').map(n => +n))
+    grid.push(str.slice(i, i + 50).split('').map(n => +n));
   }
 
   return Object.assign({}, prevState, {
     grid: grid
+  });
+}
+
+function saveFinish(state, hash) {
+  return Object.assign({}, state, {
+    records: [...state.records, hash],
+    isLoading: false
   });
 }
 
@@ -200,15 +181,17 @@ export function gameState(state, action) {
     case 'STOP':
       return Object.assign({}, state, { didStart: false });
     case 'TICK':
-      return tick(state, action.cell);
+      return tick(state);
     case 'START':
       return start(state, action);
     case 'REWIND':
       return rewind(state, action.frame);
     case 'RESTORE':
       return restore(state, action);
-    case 'SAVE':
-      return save(state, action);
+    case 'SAVE_START':
+      return saveStart(state, action);
+    case 'SAVE_FINISH':
+      return saveFinish(state, action.hash);
     default: return state;
   }
 }
@@ -227,14 +210,14 @@ export function gameProps(state, props) {
   };
 }
 
-export function gameDispatch(dispatch, props) {
+export function gameDispatch(dispatch) {
   return {
     onMouseClick: (x, y, cell, didStart) => {
       dispatch(actions.start(x, y, cell, didStart));
     },
 
-    tick: () => {
-      dispatch(actions.tick());
+    tick: (gameState) => {
+      dispatch(actions.save(gameState));
     },
 
     stopGame: () => {
@@ -245,8 +228,8 @@ export function gameDispatch(dispatch, props) {
       dispatch(actions.rewind(frame));
     },
 
-    saveGame: () => {
-      dispatch(actions.save());
+    saveGame: (gameState) => {
+      dispatch(actions.save(gameState));
     }
   };
 }

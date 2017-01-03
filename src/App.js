@@ -35,7 +35,7 @@ class Grid extends React.Component {
     if (nextProps.didStart && !this.state.intervalID) {
       this.setState({
         intervalID: setInterval(() => {
-          nextProps.tick();
+          nextProps.tick(nextProps.grid);
         }, 10)
       });
     } else if (this.state.intervalID && !nextProps.didStart) {
@@ -61,7 +61,7 @@ class Grid extends React.Component {
     const len = (props.records.length - 1).toString();
     return (
       <div className='game-of-life'>
-        <button onClick={() => props.saveGame()}>SAVE GAME</button>
+        <button onClick={() => props.saveGame(this.props.grid)}>SAVE GAME</button>
         <button onClick={() => props.stopGame()}>STOP GAME</button>
         {savedHash}
         <div>
