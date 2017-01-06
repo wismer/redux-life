@@ -14,33 +14,8 @@ const cellBits = {
 const ALIVE_CELL = 0b010;
 const LIVE_CELLS = 0b111;
 
-const adjacent = [
-  [-1, -1], [-1, 0], [-1, 1],
-  [0, -1], [0, 1], [1, -1],
-  [1, 0], [1, 1]
-];
-
-function makeRow() {
-  let row = [];
-  for (var i = 0; i < 50; i++) {
-    row.push(0);
-  }
-  return row;
-}
-
-function makeGrid() {
-  let grid = [];
-  let row = makeRow();
-  for (var i = 0; i < 50; i++) {
-    grid.push(row.slice());
-  }
-  return grid;
-}
-const sampleGrid = Array.from(new Array(32)).map((n, i) => {
-  return Math.floor(3255862335 * Math.random());
-});
 const initialState = {
-  grid: new Uint32Array(sampleGrid),
+  grid: Array.from(new Array(32)).map(n => 0),
   didStart: false,
   intervalId: null,
   savedHash: window.location.hash.replace('#', ''),
@@ -50,40 +25,6 @@ const initialState = {
   errorMsg: null,
   records: []
 };
-
-function getNeighboringCells(grid, x, y) {
-  let count = { dead: 0, live: 0 };
-  adjacent.forEach(n => {
-    let cx = x + n[0];
-    let cy = y + n[1];
-    if ((cy > -1 && cy < 50) && (cx > -1 && cx < 50)) {
-      if (grid[cx][cy]) {
-        count.live += 1;
-      } else {
-        count.dead += 1;
-      }
-    }
-  });
-
-  return count;
-}
-
-function calculate(middle, top, bottom, bitPosition) {
-  let m = middle >> bitPosition;
-  let t = top >> bitPosition;
-  let b = bottom >> bitPosition;
-
-  return {
-    aliveCells: cellBits
-  }
-}
-
-function getBitCount(left, right, mid, currentCell = 0) {
-  if (typeof cellBits[right] === 'undefined') {
-    debugger
-  }
-  return (cellBits[left] + cellBits[right] + cellBits[mid]) - currentCell;
-}
 
 function flipBits(n, aliveCells, position, isAlive) {
   if (isAlive) {
@@ -139,9 +80,22 @@ function tick(prevState) {
   return Object.assign({}, prevState, { grid: newGrid });
 }
 
-function start(state, {x, y}) {
+function flipbit(n, position, flag) {
+  return n ^ (flag << position);
+}
+
+function start(state, action) {
   return Object.assign({}, state, {
-    didStart: true
+    didStart: true,
+    grid: Array.from(state.grid).map((n, x) => {
+      if (x === action.x) {
+        return flipbit(n, action.y, ALIVE_CELL);
+      } else if (x === action.x - 1 || x === action.x + 1) {
+        return flipbit(n, action.y, LIVE_CELLS);
+      } else {
+        return n;
+      }
+    })
   });
 }
 
@@ -173,44 +127,9 @@ function saveStart(prevState) {
   return Object.assign({}, prevState, { isLoading: true });
 }
 
-function padChunk(chunk) {
-  if (chunk.length < 16) {
-    return ('0'.repeat(16 - chunk.length) + chunk);
-  } else {
-    return chunk;
-  }
-}
-
 function restore(prevState) {
-  let blocks = [];
-  let chunks = [];
-
-  prevState.savedHash.split('+').forEach((data, idx) => {
-    if (idx % 2 === 0) {
-      // block #
-      blocks.push(parseInt(data, 16));
-    } else {
-      let chunk = parseInt(data, 16).toString(2);
-      chunks.push(chunk);
-    }
-  });
-  let i = 0;
-  let str = '';
-  let block = blocks.shift();
-  let chunk;
-  while (i < 2500) {
-    if (i === (block * 16)) {
-      chunk = padChunk(chunks.shift());
-      block = blocks.shift();
-    } else {
-      chunk = '0'.repeat(16);
-    }
-
-    str += chunk;
-    i += 16;
-  }
   return Object.assign({}, prevState, {
-    grid: new Uint32Array(sampleGrid)
+    grid: []
   });
 }
 
@@ -249,10 +168,6 @@ export function gameState(state, action) {
 }
 
 export function gameProps(state, props) {
-  if (props.x > -1) {
-    return state;
-  }
-
   return {
     grid: state.grid,
     didStart: state.didStart,

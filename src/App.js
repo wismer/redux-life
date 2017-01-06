@@ -4,14 +4,6 @@ import { connect } from 'react-redux';
 import { gameProps, gameDispatch } from './reducers';
 import './App.css';
 
-function padChunk(chunk) {
-  if (chunk.length < 32) {
-    return ('0'.repeat(32 - chunk.length) + chunk);
-  } else {
-    return chunk;
-  }
-}
-
 function RowContainer(props) {
   const { x, cells, onMouseClick } = props;
   let z = [];
@@ -49,7 +41,7 @@ class Grid extends React.Component {
       this.setState({
         intervalID: setInterval(() => {
           nextProps.tick(nextProps.grid);
-        }, 100)
+        }, 500)
       });
     } else if (this.state.intervalID && !nextProps.didStart) {
       clearInterval(this.state.intervalID);
@@ -60,7 +52,7 @@ class Grid extends React.Component {
   render() {
     const { props } = this;
     let grid = Array.from(props.grid).map((n, x) => {
-      return <Row cells={n} x={x} onMouseClick={props.onMouseClick} />;
+      return <Row cells={n} x={x} key={x} onMouseClick={props.onMouseClick} />;
     });
     const savedHash = props.savedHash ? <a href={`/#${props.savedHash}`}>RESTORE</a> : '';
     const len = (props.records.length - 1).toString();

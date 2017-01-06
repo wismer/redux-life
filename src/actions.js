@@ -41,7 +41,7 @@ export function save(data) {
   return function(dispatch) {
     dispatch(tickSave());
     let options = {
-      body: JSON.stringify({ data: Array.from(data) }),
+      body: JSON.stringify({ data: Array.from(data), timestamp: Date.now() }),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     };
