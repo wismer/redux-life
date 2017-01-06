@@ -20,14 +20,13 @@ end
 post '/update-state' do
   headers 'Access-Control-Allow-Origin' => '*'
   body = JSON.parse(request.body.read)
-  data_hash = Digest::SHA256.new.digest(body["data"])
+  redis_key = body["timestamp"]
   redis_server = Redis.new
-  redis_key = data_hash.unpack('h*')[0]
 
   if redis_server.get(redis_key)
     redis_key = false
   else
-    redis_server.set(redis_key, body)
+    redis_server.set(redis_key, body["data"])
   end
 
   json :key => redis_key

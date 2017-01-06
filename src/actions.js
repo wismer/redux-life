@@ -30,20 +30,18 @@ export function saveStart() {
   };
 }
 
-function saveFinish(gameHash) {
+function saveFinish(savedStateHashKey) {
   return {
     type: 'SAVE_FINISH',
-    gameHash
+    savedStateHashKey
   };
 }
 
-export function save(gameState) {
+export function save(data) {
   return function(dispatch) {
-    let data = '';
-    gameState.forEach(row => data += row.join(''));
     dispatch(tickSave());
     let options = {
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({ data: Array.from(data) }),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     };

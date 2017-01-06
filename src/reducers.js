@@ -1,5 +1,19 @@
 import * as actions from './actions';
 
+const cellBits = {
+  '0': 0,
+  '1': 1,
+  '2': 1,
+  '3': 2,
+  '4': 1,
+  '5': 2,
+  '6': 2,
+  '7': 3
+};
+
+const ALIVE_CELL = 0b010;
+const LIVE_CELLS = 0b111;
+
 const adjacent = [
   [-1, -1], [-1, 0], [-1, 1],
   [0, -1], [0, 1], [1, -1],
@@ -22,9 +36,11 @@ function makeGrid() {
   }
   return grid;
 }
-
+const sampleGrid = Array.from(new Array(32)).map((n, i) => {
+  return Math.floor(3255862335 * Math.random());
+});
 const initialState = {
-  grid: makeGrid(),
+  grid: new Uint32Array(sampleGrid),
   didStart: false,
   intervalId: null,
   savedHash: window.location.hash.replace('#', ''),
@@ -52,22 +68,70 @@ function getNeighboringCells(grid, x, y) {
   return count;
 }
 
+function calculate(middle, top, bottom, bitPosition) {
+  let m = middle >> bitPosition;
+  let t = top >> bitPosition;
+  let b = bottom >> bitPosition;
+
+  return {
+    aliveCells: cellBits
+  }
+}
+
+function getBitCount(left, right, mid, currentCell = 0) {
+  if (typeof cellBits[right] === 'undefined') {
+    debugger
+  }
+  return (cellBits[left] + cellBits[right] + cellBits[mid]) - currentCell;
+}
+
+function flipBits(n, aliveCells, position, isAlive) {
+  if (isAlive) {
+    if (aliveCells < 2 || aliveCells > 4) {
+      // dies (not enough cells nearby)
+      return n ^ (1 << position);
+    } else {
+      // survives (enough cells nearby)
+      return n;
+    }
+  } else {
+    return aliveCells === 3 ? n ^ (1 << position) : n;
+  }
+}
+
 function tick(prevState) {
   let { grid } = prevState;
-  let newGrid = grid.map((row, x) => {
-    return row.map((cell, y) => {
-      let { live } = getNeighboringCells(grid, x, y);
-      if (!cell) {
-        cell = live === 3 ? 1 : 0;
-      } else if (live < 2) {
-        cell = 0;
-      } else if (live < 4) {
-        cell = 1;
+
+  let newGrid = grid.map((n, x) => {
+    let leftCol = grid[x - 1] || 0;
+    let rightCol = grid[x + 1] || 0;
+    let middleCol = n;
+    for (let i = 31; i > 0; i--) {
+      let modifier;
+      if (i > 29) {
+        modifier = -1;
+      } else if (i < 2) {
+        modifier = 1;
       } else {
-        cell = 0;
+        modifier = 0;
       }
-      return cell;
-    });
+      let l = leftCol >>> i + modifier;
+      let r = rightCol >>> i + modifier;
+      let m = middleCol >>> i + modifier;
+
+      let count = cellBits[r & LIVE_CELLS] + cellBits[l & LIVE_CELLS];
+      let mid = m & LIVE_CELLS;
+      let currentCellIsAlive = (mid & ALIVE_CELL) === 2;
+
+      if (currentCellIsAlive) {
+        count += cellBits[mid] - 1;
+      } else {
+        count += cellBits[mid];
+      }
+
+      n = flipBits(n, count, i, currentCellIsAlive);
+    }
+    return n;
   });
 
 
@@ -77,18 +141,6 @@ function tick(prevState) {
 
 function start(state, {x, y}) {
   return Object.assign({}, state, {
-    grid: state.grid.map((row, cx) => {
-      if (cx >= (x - 1) && cx <= (x + 1)) {
-        return row.map((c, cy) => {
-          if (cy >= (y - 1) && cy <= (y + 1)) {
-            return cy === y && cx === x ? 0 : 1;
-          } else {
-            return c;
-          }
-        });
-      }
-      return row;
-    }),
     didStart: true
   });
 }
@@ -157,27 +209,27 @@ function restore(prevState) {
     str += chunk;
     i += 16;
   }
-  let grid = [];
-  for (i = 0; i < 2500; i += 50) {
-    grid.push(str.slice(i, i + 50).split('').map(n => +n));
-  }
-
   return Object.assign({}, prevState, {
-    grid: grid
+    grid: new Uint32Array(sampleGrid)
   });
 }
 
-function saveFinish(state, hash) {
+function saveFinish(state, savedStateHashKey) {
+  console.log(savedStateHashKey);
   return Object.assign({}, state, {
-    records: [...state.records, hash],
+    records: [...state.records, savedStateHashKey],
     isLoading: false
   });
 }
 
 export function gameState(state, action) {
+  if (typeof state === 'undefined') {
+    return initialState;
+  }
+
+  console.log(state.grid, 'action:', action.type);
+
   switch (action.type) {
-    case '@@redux/INIT':
-      return restore(state || initialState, action);
     case 'STOP':
       return Object.assign({}, state, { didStart: false });
     case 'TICK':
@@ -191,7 +243,7 @@ export function gameState(state, action) {
     case 'SAVE_START':
       return saveStart(state, action);
     case 'SAVE_FINISH':
-      return saveFinish(state, action.hash);
+      return saveFinish(state, action.savedStateHashKey);
     default: return state;
   }
 }

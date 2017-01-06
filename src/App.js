@@ -4,21 +4,34 @@ import { connect } from 'react-redux';
 import { gameProps, gameDispatch } from './reducers';
 import './App.css';
 
+function padChunk(chunk) {
+  if (chunk.length < 32) {
+    return ('0'.repeat(32 - chunk.length) + chunk);
+  } else {
+    return chunk;
+  }
+}
 
 function RowContainer(props) {
-  const cells = props.cells.map((cell, i) => {
-    let className = cell === 0 ? 'cell cell-dead' : 'cell cell-alive';
+  const { x, cells, onMouseClick } = props;
+  let z = [];
+  for (var i = 31; i > 0; i--) {
+    let n = 1 & (cells >>> i);
+    z.push(n);
+  }
+  let bits = z.map((cell, y) => {
+    let className = cell ? 'cell cell-alive' : 'cell cell-dead';
     return (
       <div
-        onClick={() => props.onMouseClick(props.x, i, cell)}
-        key={i}
+        onClick={() => onMouseClick(x, y, +cell)}
+        key={`${x}${y}`}
         className={className}>
       </div>
     );
   });
   return (
     <div className='row'>
-      {cells}
+      {bits}
     </div>
   );
 }
@@ -36,7 +49,7 @@ class Grid extends React.Component {
       this.setState({
         intervalID: setInterval(() => {
           nextProps.tick(nextProps.grid);
-        }, 10)
+        }, 100)
       });
     } else if (this.state.intervalID && !nextProps.didStart) {
       clearInterval(this.state.intervalID);
@@ -46,22 +59,14 @@ class Grid extends React.Component {
 
   render() {
     const { props } = this;
-    const rows = props.grid.map((row, i) => {
-      return (
-        <Row
-          didStart={props.didStart}
-          onMouseClick={props.onMouseClick}
-          key={i}
-          x={i}
-          cells={row}
-        />
-      );
+    let grid = Array.from(props.grid).map((n, x) => {
+      return <Row cells={n} x={x} onMouseClick={props.onMouseClick} />;
     });
     const savedHash = props.savedHash ? <a href={`/#${props.savedHash}`}>RESTORE</a> : '';
     const len = (props.records.length - 1).toString();
     return (
       <div className='game-of-life'>
-        <button onClick={() => props.saveGame(this.props.grid)}>SAVE GAME</button>
+        <button onClick={() => props.saveGame(props.grid)}>SAVE GAME</button>
         <button onClick={() => props.stopGame()}>STOP GAME</button>
         {savedHash}
         <div>
@@ -70,7 +75,7 @@ class Grid extends React.Component {
           STEP {len}
         </div>
         <div className='grid'>
-          {rows}
+          {grid}
         </div>
       </div>
     );
