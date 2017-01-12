@@ -7,17 +7,21 @@ import './App.css';
 function RowContainer(props) {
   const { x, cells, onMouseClick } = props;
   let z = [];
-  for (var i = 31; i > 0; i--) {
-    let n = 1 & (cells >>> i);
-    z.push(n);
+  for (var i = 0; i < 32; i++) {
+    let bit = 1 << i;
+    if (cells & bit) {
+      z.push(1);
+    } else {
+      z.push(0);
+    }
   }
   let bits = z.map((cell, y) => {
     let className = cell ? 'cell cell-alive' : 'cell cell-dead';
     return (
       <div
-        onClick={() => onMouseClick(x, y, +cell)}
+        onClick={() => onMouseClick(x, y, cell)}
         key={`${x}${y}`}
-        className={className}>
+        className={className}>{cell}
       </div>
     );
   });
@@ -38,11 +42,12 @@ class Grid extends React.Component {
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.didStart && !this.state.intervalID) {
-      this.setState({
+      this.setState(prevState => ({
+        stepCount: prevState.stepCount + 1,
         intervalID: setInterval(() => {
           nextProps.tick(nextProps.grid);
-        }, 500)
-      });
+        }, 200)
+      }));
     } else if (this.state.intervalID && !nextProps.didStart) {
       clearInterval(this.state.intervalID);
       this.setState({ intervalID: null });
@@ -60,6 +65,8 @@ class Grid extends React.Component {
       <div className='game-of-life'>
         <button onClick={() => props.saveGame(props.grid)}>SAVE GAME</button>
         <button onClick={() => props.stopGame()}>STOP GAME</button>
+        <button onClick={() => props.stepForward()}>Advance one step</button>
+        <button onClick={() => props.stepBackward()}>Go Back A Step</button>
         {savedHash}
         <div>
           STEP 0

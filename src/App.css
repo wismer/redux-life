@@ -43,4 +43,5 @@ article {
 
 .cell.cell-alive {
   background-color: black;
+  color: white;
 }

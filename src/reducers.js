@@ -1,4 +1,5 @@
 import * as actions from './actions';
+import BitWise from './bitwise';
 
 const cellBits = {
   '0': 0,
@@ -17,6 +18,7 @@ const LIVE_CELLS = 0b111;
 const initialState = {
   grid: Array.from(new Array(32)).map(n => 0),
   didStart: false,
+  stepCount: 0,
   intervalId: null,
   savedHash: window.location.hash.replace('#', ''),
   isFetching: false,
@@ -26,76 +28,113 @@ const initialState = {
   records: []
 };
 
-function flipBits(n, aliveCells, position, isAlive) {
+function updateInt(int, isAlive, livingCells, bitPosition) {
   if (isAlive) {
-    if (aliveCells < 2 || aliveCells > 4) {
-      // dies (not enough cells nearby)
-      return n ^ (1 << position);
+    if (livingCells < 2 || livingCells > 3) {
+      return int ^ (1 << bitPosition);
     } else {
-      // survives (enough cells nearby)
-      return n;
+      return int;
     }
   } else {
-    return aliveCells === 3 ? n ^ (1 << position) : n;
+    return livingCells === 3 ? int ^ (1 << bitPosition) : int;
   }
+}
+
+function nthBit(int, position, flag) {
+  return (int >> position) & flag;
+}
+
+function tallyBits(int, flag, position) {
+  return flag & (int >> position);
+}
+
+function countBits(n) {
+  let count = 0;
+
+  while (n != 0) {
+    n &= n - 1;
+    count++;
+  }
+
+  return count;
+}
+
+function evaluateInt(prevInt, nextInt, currentInt) {
+  let n = 0;
+  for (var i = 30; i > 0; i--) {
+    let p = prevInt >>> i;
+    let m = currentInt >>> i;
+    let currentCell = (m >>> 1) & 1;
+    let next = nextInt >>> i;
+    let count = countBits(p & 7) + countBits(next & 7) + countBits(m & 5);
+    if (currentCell && count === 2) {
+      n |= 1;
+    } else if (!currentCell && count === 3) {
+      n |= 1;
+    }
+    if (n) {
+      n <<= 1;
+    }
+  }
+
+  return n;
 }
 
 function tick(prevState) {
   let { grid } = prevState;
+  let newGrid = [];
 
-  let newGrid = grid.map((n, x) => {
-    let leftCol = grid[x - 1] || 0;
-    let rightCol = grid[x + 1] || 0;
-    let middleCol = n;
-    for (let i = 31; i > 0; i--) {
-      let modifier;
-      if (i > 29) {
-        modifier = -1;
-      } else if (i < 2) {
-        modifier = 1;
-      } else {
-        modifier = 0;
-      }
-      let l = leftCol >>> i + modifier;
-      let r = rightCol >>> i + modifier;
-      let m = middleCol >>> i + modifier;
-
-      let count = cellBits[r & LIVE_CELLS] + cellBits[l & LIVE_CELLS];
-      let mid = m & LIVE_CELLS;
-      let currentCellIsAlive = (mid & ALIVE_CELL) === 2;
-
-      if (currentCellIsAlive) {
-        count += cellBits[mid] - 1;
-      } else {
-        count += cellBits[mid];
+  for (var int = 0; int < 32; int++) {
+    let bits = BitWise([grid[int - 1] || 0, grid[int], grid[int + 1] || 0]);
+    let n = 0;
+    for (var i = 0; i < 32; i++) {
+      let c = bits.count(7, 5);
+      if (bits.isAlive(i)) {
+        if (c < 2 || c > 3) {
+          // dies
+        } else {
+          n = n ^ (1 << i);
+          // lives
+        }
+      } else if (c === 3) {
+        n = n ^ (1 << i);
+        // cell becomes alive
       }
 
-      n = flipBits(n, count, i, currentCellIsAlive);
+      bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
     }
-    return n;
-  });
+    newGrid.push(n);
 
-
-
+  }
   return Object.assign({}, prevState, { grid: newGrid });
 }
 
-function flipbit(n, position, flag) {
-  return n ^ (flag << position);
+function flipbit(n, y, x, flag) {
+  // TODO - some weird behavior if you click on the right or leftmost edges
+  // when starting the animation
+  let modifier = 1;
+  if (y === 31) {
+    flag >>= 1;
+  } else if (y === 0) {
+    modifier = 0;
+    flag = flag === 7 ? 3 : 2;
+  }
+  return Math.abs(n ^ (flag << y - modifier));
 }
 
-function start(state, action) {
+function start(state, {x, y}) {
+  let grid = Array.from(state.grid).map((n, i) => {
+    if (i === x) {
+      return flipbit(n, y, x, 0b101);
+    } else if (i === x - 1 || i === x + 1) {
+      return flipbit(n, y, x, LIVE_CELLS);
+    } else {
+      return n;
+    }
+  });
   return Object.assign({}, state, {
     didStart: true,
-    grid: Array.from(state.grid).map((n, x) => {
-      if (x === action.x) {
-        return flipbit(n, action.y, ALIVE_CELL);
-      } else if (x === action.x - 1 || x === action.x + 1) {
-        return flipbit(n, action.y, LIVE_CELLS);
-      } else {
-        return n;
-      }
-    })
+    grid
   });
 }
 
@@ -134,7 +173,6 @@ function restore(prevState) {
 }
 
 function saveFinish(state, savedStateHashKey) {
-  console.log(savedStateHashKey);
   return Object.assign({}, state, {
     records: [...state.records, savedStateHashKey],
     isLoading: false
@@ -145,8 +183,6 @@ export function gameState(state, action) {
   if (typeof state === 'undefined') {
     return initialState;
   }
-
-  console.log(state.grid, 'action:', action.type);
 
   switch (action.type) {
     case 'STOP':
@@ -170,6 +206,7 @@ export function gameState(state, action) {
 export function gameProps(state, props) {
   return {
     grid: state.grid,
+    stepCount: state.stepCount,
     didStart: state.didStart,
     intervalId: state.intervalId,
     records: state.records,
@@ -197,6 +234,10 @@ export function gameDispatch(dispatch) {
 
     saveGame: (gameState) => {
       dispatch(actions.save(gameState));
+    },
+
+    stepForward: () => {
+      dispatch(actions.tickSave());
     }
   };
 }
