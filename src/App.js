@@ -45,7 +45,7 @@ class Grid extends React.Component {
       this.setState(prevState => ({
         stepCount: prevState.stepCount + 1,
         intervalID: setInterval(() => {
-          nextProps.tick(nextProps.grid);
+          nextProps.tick(nextProps.grid, nextProps.bitmap, nextProps.records);
         }, 200)
       }));
     } else if (this.state.intervalID && !nextProps.didStart) {

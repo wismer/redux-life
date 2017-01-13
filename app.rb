@@ -20,7 +20,7 @@ end
 post '/update-state' do
   headers 'Access-Control-Allow-Origin' => '*'
   body = JSON.parse(request.body.read)
-  redis_key = body["timestamp"]
+  redis_key = body["key"]
   redis_server = Redis.new
 
   if redis_server.get(redis_key)
