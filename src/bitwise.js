@@ -1,6 +1,24 @@
-export default function BitWise(numbers) {
+export function BitWise(numbers) {
   return {
     shift: i => BitWise(numbers.map(num => num >>> i)),
+    reduce: (f, i, n) => {
+      let bits = BitWise(numbers.map(num => num >>> i));
+      let c = bits.count(7, 5);
+      if (bits.isAlive(i)) {
+        if (c < 2 || c > 3) {
+          // dies
+        } else {
+          n = n ^ (1 << i);
+          // lives
+        }
+      } else if (c === 3) {
+        n = n ^ (1 << i);
+        // dead cell becomes alive
+      }
+
+      bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
+
+    },
     inspect: () => {
       return '\n' + numbers.map(n => {
         let nstring = n.toString(2);
@@ -33,5 +51,33 @@ export default function BitWise(numbers) {
     },
 
     isAlive: () => ((numbers[1] >> 1) & 1) === 1
+  };
+}
+
+export function BitMap(nums) {
+  return {
+    bitwise: i => BitWise([nums[i - 1] || 0, nums[i], nums[i + 1] || 0]),
+    hash: f => nums.filter(a => a).map(f).join('-'),
+    map: f => {
+      return BitMap(nums.map((n, i) => {
+        return f(BitWise([nums[i - 1] || 0, n, nums[i + 1] || 0]));
+      }));
+    },
+    fold: () => nums,
+    bitmap: f => {
+      let bitmap = 0;
+      let hash = [];
+      nums.forEach((num, idx) => {
+        if (num) {
+          bitmap ^= 1 << idx;
+          hash.push(f(num));
+        }
+      });
+
+      return {
+        bitmap: bitmap ? `${f(bitmap)}#` + hash.join('-') : null,
+        grid: nums
+      };
+    }
   };
 }

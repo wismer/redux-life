@@ -1,16 +1,5 @@
 import * as actions from './actions';
-import BitWise from './bitwise';
-
-const cellBits = {
-  '0': 0,
-  '1': 1,
-  '2': 1,
-  '3': 2,
-  '4': 1,
-  '5': 2,
-  '6': 2,
-  '7': 3
-};
+import { BitWise, BitMap } from './bitwise';
 
 const ALIVE_CELL = 0b010;
 const LIVE_CELLS = 0b111;
@@ -25,88 +14,55 @@ const initialState = {
   isLoading: false,
   didError: false,
   errorMsg: null,
+  bitmap: null,
   records: []
 };
 
-function updateInt(int, isAlive, livingCells, bitPosition) {
-  if (isAlive) {
-    if (livingCells < 2 || livingCells > 3) {
-      return int ^ (1 << bitPosition);
-    } else {
-      return int;
-    }
-  } else {
-    return livingCells === 3 ? int ^ (1 << bitPosition) : int;
-  }
-}
-
-function nthBit(int, position, flag) {
-  return (int >> position) & flag;
-}
-
-function tallyBits(int, flag, position) {
-  return flag & (int >> position);
-}
-
-function countBits(n) {
-  let count = 0;
-
-  while (n != 0) {
-    n &= n - 1;
-    count++;
-  }
-
-  return count;
-}
-
-function evaluateInt(prevInt, nextInt, currentInt) {
-  let n = 0;
-  for (var i = 30; i > 0; i--) {
-    let p = prevInt >>> i;
-    let m = currentInt >>> i;
-    let currentCell = (m >>> 1) & 1;
-    let next = nextInt >>> i;
-    let count = countBits(p & 7) + countBits(next & 7) + countBits(m & 5);
-    if (currentCell && count === 2) {
-      n |= 1;
-    } else if (!currentCell && count === 3) {
-      n |= 1;
-    }
-    if (n) {
-      n <<= 1;
-    }
-  }
-
-  return n;
-}
-
 function tick(prevState) {
-  let { grid } = prevState;
   let newGrid = [];
+  let { grid } = BitMap(prevState.grid).bitmap();
+  let bitmap = 0;
 
-  for (var int = 0; int < 32; int++) {
-    let bits = BitWise([grid[int - 1] || 0, grid[int], grid[int + 1] || 0]);
-    let n = 0;
-    for (var i = 0; i < 32; i++) {
-      let c = bits.count(7, 5);
-      if (bits.isAlive(i)) {
-        if (c < 2 || c > 3) {
-          // dies
-        } else {
-          n = n ^ (1 << i);
-          // lives
-        }
-      } else if (c === 3) {
-        n = n ^ (1 << i);
-        // cell becomes alive
-      }
+  bitmap
+    .map((n, i) => {
 
-      bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
-    }
-    newGrid.push(n);
+    })
+    .map((bitwise, i) => {
 
-  }
-  return Object.assign({}, prevState, { grid: newGrid });
+    });
+
+  // for (var int = 0; int < 32; int++) {
+  //   let bits = numbers.bitwise(int);
+  //   let n = 0;
+  //   for (var i = 0; i < 32; i++) {
+  //     let c = bits.count(7, 5);
+  //     if (bits.isAlive(i)) {
+  //       if (c < 2 || c > 3) {
+  //         // dies
+  //       } else {
+  //         n = n ^ (1 << i);
+  //         // lives
+  //       }
+  //     } else if (c === 3) {
+  //       n = n ^ (1 << i);
+  //       // dead cell becomes alive
+  //     }
+  //
+  //     bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
+  //   }
+  //   newGrid.push(n);
+  //
+  //   if (n) {
+  //     bitmap ^= (1 << int);
+  //   }
+  // }
+  grid = grid.map((bitwise, idx) => {
+    return bitwise.shift(idx);
+  });
+
+  return Object.assign({}, prevState, {
+    grid: grid.fold()
+  });
 }
 
 function flipbit(n, y, x, flag) {
@@ -123,7 +79,7 @@ function flipbit(n, y, x, flag) {
 }
 
 function start(state, {x, y}) {
-  let grid = Array.from(state.grid).map((n, i) => {
+  let { bitmap, grid } = BitMap(state.grid).map((n, i) => {
     if (i === x) {
       return flipbit(n, y, x, 0b101);
     } else if (i === x - 1 || i === x + 1) {
@@ -131,10 +87,12 @@ function start(state, {x, y}) {
     } else {
       return n;
     }
-  });
+  }).bitmap(n => n.toString(32));
+
   return Object.assign({}, state, {
     didStart: true,
-    grid
+    grid,
+    bitmap
   });
 }
 
@@ -203,15 +161,16 @@ export function gameState(state, action) {
   }
 }
 
-export function gameProps(state, props) {
-  return {
-    grid: state.grid,
-    stepCount: state.stepCount,
-    didStart: state.didStart,
-    intervalId: state.intervalId,
-    records: state.records,
-    savedHash: state.savedHash
-  };
+export function gameProps(state) {
+  return state;
+  // return {
+  //   grid: state.grid,
+  //   stepCount: state.stepCount,
+  //   didStart: state.didStart,
+  //   intervalId: state.intervalId,
+  //   records: state.records,
+  //   bitmap: state.bitmap
+  // };
 }
 
 export function gameDispatch(dispatch) {
@@ -220,8 +179,8 @@ export function gameDispatch(dispatch) {
       dispatch(actions.start(x, y, cell, didStart));
     },
 
-    tick: (gameState) => {
-      dispatch(actions.save(gameState));
+    tick: (gameState, bitmap, records) => {
+      dispatch(actions.save(gameState, bitmap));
     },
 
     stopGame: () => {

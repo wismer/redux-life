@@ -37,20 +37,20 @@ function saveFinish(savedStateHashKey) {
   };
 }
 
-export function save(data) {
+export function save(data, key) {
   return function(dispatch) {
     dispatch(tickSave());
     let options = {
-      body: JSON.stringify({ data: Array.from(data), timestamp: Date.now() }),
+      body: JSON.stringify({ data: Array.from(data), timestamp: Date.now(), key }),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     };
     return fetch('http://localhost:4567/update-state', options)
-      .then(response => response.json())
+      .then(response => response.json(), () => {})
       .then(json => {
         if (json.key) {
           dispatch(saveFinish(json.key));
         }
-      });
+      }, () => {});
   };
 }
