@@ -1,9 +1,6 @@
 import * as actions from './actions';
 import { BitWise, BitMap } from './bitwise';
 
-const ALIVE_CELL = 0b010;
-const LIVE_CELLS = 0b111;
-
 const initialState = {
   grid: Array.from(new Array(32)).map(n => 0),
   didStart: false,
@@ -18,14 +15,26 @@ const initialState = {
   records: []
 };
 
+function bitfield(nums) {
+  let bitmap = 0;
+  let hash = [];
+  nums.forEach((num, idx) => {
+    if (num) {
+      bitmap ^= 1 << idx;
+      hash.push(num.toString(32));
+    }
+  });
+
+  return bitmap ? `${bitmap.toString(32)}#${hash.join('-')}` : null;
+}
+
 function tick(prevState) {
-  let { grid } = prevState;
+  let grid = BitMap(prevState.grid).map(nums => {
+    return BitWise(nums).reduce((left, right, index) => left ^ (right << index), 0);
+  });
 
   return Object.assign({}, prevState, {
-    grid: grid.map((n, x) => {
-      let bitwise = BitWise([grid[x - 1] || 0, n, grid[x + 1] || 0]);
-      return bitwise.reduce((left, right, index) => left ^ (right << index), 0);
-    })
+    grid, bitmap: bitfield(grid)
   });
 }
 
@@ -43,20 +52,12 @@ function flipbit(n, y, x, flag) {
 }
 
 function start(state, {x, y}) {
-  let { bitmap, grid } = BitMap(state.grid).map((n, i) => {
-    if (i === x) {
-      return flipbit(n, y, x, 0b101);
-    } else if (i === x - 1 || i === x + 1) {
-      return flipbit(n, y, x, LIVE_CELLS);
-    } else {
-      return n;
-    }
-  }).bitmap(n => n.toString(32));
-
+  let grid = BitMap(state.grid).stamp(x, y);
+  let bitmap = bitfield(grid);
   return Object.assign({}, state, {
     didStart: true,
-    grid,
-    bitmap
+    bitmap,
+    grid
   });
 }
 
@@ -127,14 +128,6 @@ export function gameState(state, action) {
 
 export function gameProps(state) {
   return state;
-  // return {
-  //   grid: state.grid,
-  //   stepCount: state.stepCount,
-  //   didStart: state.didStart,
-  //   intervalId: state.intervalId,
-  //   records: state.records,
-  //   bitmap: state.bitmap
-  // };
 }
 
 export function gameDispatch(dispatch) {

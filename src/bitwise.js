@@ -1,3 +1,5 @@
+const DEFAULT_STAMP = [7, 5, 7];
+
 export function BitWise(numbers) {
   return {
     reduce: (fn, integer) => {
@@ -31,19 +33,19 @@ export function BitWise(numbers) {
 
     toArray: () => numbers,
     count: (outer = 7, inner = 5) => {
-      let c = 0;
+      let x = 0;
       numbers.forEach((n, i) => {
         if (i === 1) {
-          c |= (inner & n);
+          x |= (inner & n);
         } else {
-          c |= (outer & n);
+          x |= (outer & n);
         }
-        c <<= 3;
+        x <<= 3;
       });
       let count = 0;
 
-      while (c !== 0) {
-        c &= (c - 1);
+      while (x !== 0) {
+        x &= (x - 1);
         count++;
       }
 
@@ -56,24 +58,15 @@ export function BitWise(numbers) {
 
 export function BitMap(nums) {
   return {
-    bitwise: i => BitWise([nums[i - 1] || 0, nums[i], nums[i + 1] || 0]),
-    hash: f => nums.filter(a => a).map(f).join('-'),
-    map: f => BitMap(nums.map(f)),
-    fold: () => nums,
-    bitmap: f => {
-      let bitmap = 0;
-      let hash = [];
-      nums.forEach((num, idx) => {
-        if (num) {
-          bitmap ^= 1 << idx;
-          hash.push(f(num));
+    map: f => nums.map((n, i) => f([nums[i - 1] || 0, n, nums[i + 1] || 0], i)),
+    stamp: (x, y, stamp = DEFAULT_STAMP) => {
+      return nums.map((n, i) => {
+        if (stamp.length > 0 && i >= x - 1) {
+          return n ^ (stamp.pop() << y - 1);
         }
-      });
 
-      return {
-        bitmap: bitmap ? `${f(bitmap)}#` + hash.join('-') : null,
-        grid: nums
-      };
+        return n;
+      });
     }
   };
 }
