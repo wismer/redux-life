@@ -1,23 +1,23 @@
 export function BitWise(numbers) {
   return {
-    shift: i => BitWise(numbers.map(num => num >>> i)),
-    reduce: (f, i, n) => {
-      let bits = BitWise(numbers.map(num => num >>> i));
-      let c = bits.count(7, 5);
-      if (bits.isAlive(i)) {
-        if (c < 2 || c > 3) {
-          // dies
-        } else {
-          n = n ^ (1 << i);
-          // lives
+    reduce: (fn, integer) => {
+      for (var i = 0; i < 32; i++) {
+        let n = 0;
+        let bits = BitWise(numbers.map(num => num >>> i - 1));
+        let count = bits.count();
+        if (bits.isAlive(i)) {
+          // cell dies / lives
+          n = count < 2 || count > 3 ? 0 : 1;
+        } else if (count === 3) {
+          // dead cell comes to life
+          n = 1;
         }
-      } else if (c === 3) {
-        n = n ^ (1 << i);
-        // dead cell becomes alive
+
+
+        integer = fn(integer, n, i);
       }
 
-      bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
-
+      return integer;
     },
     inspect: () => {
       return '\n' + numbers.map(n => {
@@ -58,11 +58,7 @@ export function BitMap(nums) {
   return {
     bitwise: i => BitWise([nums[i - 1] || 0, nums[i], nums[i + 1] || 0]),
     hash: f => nums.filter(a => a).map(f).join('-'),
-    map: f => {
-      return BitMap(nums.map((n, i) => {
-        return f(BitWise([nums[i - 1] || 0, n, nums[i + 1] || 0]));
-      }));
-    },
+    map: f => BitMap(nums.map(f)),
     fold: () => nums,
     bitmap: f => {
       let bitmap = 0;

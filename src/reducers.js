@@ -19,49 +19,13 @@ const initialState = {
 };
 
 function tick(prevState) {
-  let newGrid = [];
-  let { grid } = BitMap(prevState.grid).bitmap();
-  let bitmap = 0;
-
-  bitmap
-    .map((n, i) => {
-
-    })
-    .map((bitwise, i) => {
-
-    });
-
-  // for (var int = 0; int < 32; int++) {
-  //   let bits = numbers.bitwise(int);
-  //   let n = 0;
-  //   for (var i = 0; i < 32; i++) {
-  //     let c = bits.count(7, 5);
-  //     if (bits.isAlive(i)) {
-  //       if (c < 2 || c > 3) {
-  //         // dies
-  //       } else {
-  //         n = n ^ (1 << i);
-  //         // lives
-  //       }
-  //     } else if (c === 3) {
-  //       n = n ^ (1 << i);
-  //       // dead cell becomes alive
-  //     }
-  //
-  //     bits = bits.shift(i === 0 || i === 31 ? 0 : 1);
-  //   }
-  //   newGrid.push(n);
-  //
-  //   if (n) {
-  //     bitmap ^= (1 << int);
-  //   }
-  // }
-  grid = grid.map((bitwise, idx) => {
-    return bitwise.shift(idx);
-  });
+  let { grid } = prevState;
 
   return Object.assign({}, prevState, {
-    grid: grid.fold()
+    grid: grid.map((n, x) => {
+      let bitwise = BitWise([grid[x - 1] || 0, n, grid[x + 1] || 0]);
+      return bitwise.reduce((left, right, index) => left ^ (right << index), 0);
+    })
   });
 }
 
