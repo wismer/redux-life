@@ -12,6 +12,7 @@ const initialState = {
   didError: false,
   errorMsg: null,
   bitmap: null,
+  intervalID: null,
   records: []
 };
 
@@ -20,7 +21,7 @@ function bitfield(nums) {
   let hash = [];
   nums.forEach((num, idx) => {
     if (num) {
-      bitmap ^= 1 << idx;
+      bitmap ^= (1 << idx);
       hash.push(num.toString(32));
     }
   });
@@ -38,25 +39,13 @@ function tick(prevState) {
   });
 }
 
-function flipbit(n, y, x, flag) {
-  // TODO - some weird behavior if you click on the right or leftmost edges
-  // when starting the animation
-  let modifier = 1;
-  if (y === 31) {
-    flag >>= 1;
-  } else if (y === 0) {
-    modifier = 0;
-    flag = flag === 7 ? 3 : 2;
-  }
-  return Math.abs(n ^ (flag << y - modifier));
-}
-
-function start(state, {x, y}) {
+function start(state, {x, y, intervalID}) {
   let grid = BitMap(state.grid).stamp(x, y);
   let bitmap = bitfield(grid);
   return Object.assign({}, state, {
     didStart: true,
     bitmap,
+    intervalID,
     grid
   });
 }
@@ -89,17 +78,35 @@ function saveStart(prevState) {
   return Object.assign({}, prevState, { isLoading: true });
 }
 
-function restore(prevState) {
-  return Object.assign({}, prevState, {
-    grid: []
-  });
+function restore(prevState, bitmap) {
+  let grid = prevState.grid.slice();
+  let [bitfield, body] = bitmap.split('#');
+  let ints = body.split('-').map(n => parseInt(n, 32));
+  let i = 32;
+  let field = parseInt(bitfield, 32);
+  while (i > 0) {
+    if (1 & (field >>> i)) {
+      grid[i] = ints.pop();
+    }
+
+    i--;
+  }
+
+  let state = Object.assign({}, prevState, { grid });
+  return tick(state);
 }
 
 function saveFinish(state, savedStateHashKey) {
-  return Object.assign({}, state, {
+  let newState = {
     records: [...state.records, savedStateHashKey],
     isLoading: false
-  });
+  };
+  return Object.assign({}, state, newState);
+}
+
+function stopGame(prevState) {
+  clearInterval(prevState.intervalID);
+  return Object.assign({}, prevState, { intervalID: null, didStart: false });
 }
 
 export function gameState(state, action) {
@@ -109,7 +116,7 @@ export function gameState(state, action) {
 
   switch (action.type) {
     case 'STOP':
-      return Object.assign({}, state, { didStart: false });
+      return stopGame(state);
     case 'TICK':
       return tick(state);
     case 'START':
@@ -117,9 +124,11 @@ export function gameState(state, action) {
     case 'REWIND':
       return rewind(state, action.frame);
     case 'RESTORE':
-      return restore(state, action);
+      return restore(state, action.bitmap);
     case 'SAVE_START':
       return saveStart(state, action);
+    case 'ADD_STAMP':
+      return start(state, action);
     case 'SAVE_FINISH':
       return saveFinish(state, action.savedStateHashKey);
     default: return state;
@@ -132,12 +141,8 @@ export function gameProps(state) {
 
 export function gameDispatch(dispatch) {
   return {
-    onMouseClick: (x, y, cell, didStart) => {
-      dispatch(actions.start(x, y, cell, didStart));
-    },
-
-    tick: (gameState, bitmap, records) => {
-      dispatch(actions.save(gameState, bitmap));
+    onMouseClick: (x, y) => {
+      dispatch(actions.startInterval(x, y));
     },
 
     stopGame: () => {

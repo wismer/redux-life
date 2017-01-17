@@ -19,7 +19,7 @@ function RowContainer(props) {
     let className = cell ? 'cell cell-alive' : 'cell cell-dead';
     return (
       <div
-        onClick={() => onMouseClick(x, y, cell)}
+        onClick={() => onMouseClick(x, y)}
         key={`${x}${y}`}
         className={className}>{cell}
       </div>
@@ -32,28 +32,9 @@ function RowContainer(props) {
   );
 }
 
-const Row = connect(gameProps)(RowContainer);
+const Row = connect()(RowContainer);
 
 class Grid extends React.Component {
-  constructor() {
-    super(...arguments);
-    this.state = { intervalID: null };
-  }
-
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.didStart && !this.state.intervalID) {
-      this.setState(prevState => ({
-        stepCount: prevState.stepCount + 1,
-        intervalID: setInterval(() => {
-          nextProps.tick(nextProps.grid, nextProps.bitmap, nextProps.records);
-        }, 200)
-      }));
-    } else if (this.state.intervalID && !nextProps.didStart) {
-      clearInterval(this.state.intervalID);
-      this.setState({ intervalID: null });
-    }
-  }
-
   render() {
     const { props } = this;
     let grid = Array.from(props.grid).map((n, x) => {

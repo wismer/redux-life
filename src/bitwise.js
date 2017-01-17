@@ -15,7 +15,6 @@ export function BitWise(numbers) {
           n = 1;
         }
 
-
         integer = fn(integer, n, i);
       }
 
@@ -31,7 +30,6 @@ export function BitWise(numbers) {
       }).join('\n');
     },
 
-    toArray: () => numbers,
     count: (outer = 7, inner = 5) => {
       let x = 0;
       numbers.forEach((n, i) => {
@@ -59,7 +57,8 @@ export function BitWise(numbers) {
 export function BitMap(nums) {
   return {
     map: f => nums.map((n, i) => f([nums[i - 1] || 0, n, nums[i + 1] || 0], i)),
-    stamp: (x, y, stamp = DEFAULT_STAMP) => {
+    stamp: (x, y) => {
+      let stamp = DEFAULT_STAMP.slice();
       return nums.map((n, i) => {
         if (stamp.length > 0 && i >= x - 1) {
           return n ^ (stamp.pop() << y - 1);
