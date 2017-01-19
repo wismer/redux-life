@@ -44,3 +44,6 @@ function restore(prevState, bitmap) {
   return tick(state);
 }
 ```
+
+2. Use Bitfield as a way to describe payloads & how useful they can be.
+3. Animate the bits being entered, maybe?

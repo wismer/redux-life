@@ -1,17 +1,17 @@
-function start(x, y, intervalID) {
-  return { type: 'START', x, y, intervalID };
+function start(x, y, intervalID, stamp) {
+  return { type: 'START', x, y, intervalID, stamp };
 }
 
 export function startInterval(x, y) {
   return function(dispatch, getState) {
-    let state = getState();
-    if (state.intervalID) {
-      clearInterval(state.intervalID);
+    let { game, stamp } = getState();
+    if (game.intervalID) {
+      clearInterval(game.intervalID);
     }
     let intervalID = setInterval(() => {
       dispatch(save());
     }, 200);
-    dispatch(start(x, y, intervalID));
+    dispatch(start(x, y, intervalID, stamp.pattern));
   };
 }
 
@@ -44,8 +44,9 @@ function saveFinish(savedStateHashKey) {
 }
 
 export function save() {
-  return function(dispatch, state) {
-    let { grid, bitmap, records } = state();
+  return function(dispatch, getState) {
+    let state = getState();
+    let { grid, bitmap, records } = state.game;
     if (records.includes(bitmap)) {
       return dispatch(restore(bitmap));
     } else {
@@ -60,4 +61,10 @@ export function save() {
       .then(response => response.json(), () => {})
       .then(json => json.key ? dispatch(saveFinish(json.key)) : null, () => {});
   };
+}
+
+/* STAMP ACTIONS */
+
+export function editStamp(x, y) {
+  return { type: 'EDIT_STAMP', x, y };
 }

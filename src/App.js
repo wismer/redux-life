@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import { connect } from 'react-redux';
-import { gameProps, gameDispatch } from './reducers';
+import { gameProps, gameDispatch } from './reducers/game';
+import { bitfieldProps } from './reducers/stamp';
+import Stamp from './components/stamp';
 import './App.css';
 
 function RowContainer(props) {
@@ -21,7 +23,7 @@ function RowContainer(props) {
       <div
         onClick={() => onMouseClick(x, y)}
         key={`${x}${y}`}
-        className={className}>{cell}
+        className={className}>
       </div>
     );
   });
@@ -57,10 +59,45 @@ class Grid extends React.Component {
         <div className='grid'>
           {grid}
         </div>
+
+        <div className='stamp-container'>
+          {this.props.children}
+        </div>
       </div>
     );
   }
 }
+
+class BitFieldContainer extends Component {
+  render() {
+    let { bitfield } = this.props;
+    let bits = [];
+    for (var i = 0; i < 8; i++) {
+      bits.push((bitfield >>> i) & 1);
+    }
+
+    bits = bits.map(bit => {
+      let msg = 'I do not have this piece!';
+      if (bit) {
+        msg = 'I have this piece!';
+      }
+
+      return (
+        <div className='bit-box'>
+          <div className='bit'>{bit}</div>
+          <div className='bit-msg'>{msg}</div>
+        </div>
+      );
+    });
+    return (
+      <div className='bitfield'>
+        {bits}
+      </div>
+    );
+  }
+}
+
+const BitField = connect(bitfieldProps)(BitFieldContainer);
 
 const GameOfLife = connect(gameProps, gameDispatch)(Grid);
 
@@ -76,7 +113,12 @@ class App extends Component {
           <p className="App-intro">
             To get started, edit <code>src/App.js</code> and save to reload.
           </p>
-          <GameOfLife />
+          <GameOfLife>
+            <Stamp />
+          </GameOfLife>
+
+          <BitField />
+
         </article>
       </div>
     );

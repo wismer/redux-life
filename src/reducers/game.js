@@ -1,8 +1,8 @@
-import * as actions from './actions';
-import { BitWise, BitMap } from './bitwise';
+import { BitWise, BitMap } from '../bitwise';
+import * as actions from '../actions';
 
 const initialState = {
-  grid: Array.from(new Array(32)).map(n => 0),
+  grid: Array.from(new Array(32)).map(() => 0),
   didStart: false,
   stepCount: 0,
   intervalId: null,
@@ -34,13 +34,18 @@ function tick(prevState) {
     return BitWise(nums).reduce((left, right, index) => left ^ (right << index), 0);
   });
 
+  if (BitMap(grid).isMoving()) {
+    grid.shift();
+    grid.push(0);
+  }
+
   return Object.assign({}, prevState, {
     grid, bitmap: bitfield(grid)
   });
 }
 
-function start(state, {x, y, intervalID}) {
-  let grid = BitMap(state.grid).stamp(x, y);
+function start(state, {x, y, intervalID, stamp}) {
+  let grid = BitMap(state.grid).stamp(x, y, stamp);
   let bitmap = bitfield(grid);
   return Object.assign({}, state, {
     didStart: true,
@@ -105,15 +110,10 @@ function saveFinish(state, savedStateHashKey) {
 }
 
 function stopGame(prevState) {
-  clearInterval(prevState.intervalID);
   return Object.assign({}, prevState, { intervalID: null, didStart: false });
 }
 
-export function gameState(state, action) {
-  if (typeof state === 'undefined') {
-    return initialState;
-  }
-
+export function game(state = initialState, action) {
   switch (action.type) {
     case 'STOP':
       return stopGame(state);
@@ -136,7 +136,11 @@ export function gameState(state, action) {
 }
 
 export function gameProps(state) {
-  return state;
+  return state.game;
+}
+
+export function bitfieldProps(state) {
+  return { bitfield: state.bitfield };
 }
 
 export function gameDispatch(dispatch) {

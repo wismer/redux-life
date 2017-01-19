@@ -1,5 +1,15 @@
 const DEFAULT_STAMP = [7, 5, 7];
 
+function bitCount(n) {
+  let c = 0;
+  while (n !== 0) {
+    n &= (n - 1);
+    c++;
+  }
+
+  return c;
+}
+
 export function BitWise(numbers) {
   return {
     reduce: (fn, integer) => {
@@ -40,14 +50,8 @@ export function BitWise(numbers) {
         }
         x <<= 3;
       });
-      let count = 0;
 
-      while (x !== 0) {
-        x &= (x - 1);
-        count++;
-      }
-
-      return count;
+      return bitCount(x);
     },
 
     isAlive: () => ((numbers[1] >> 1) & 1) === 1
@@ -57,8 +61,18 @@ export function BitWise(numbers) {
 export function BitMap(nums) {
   return {
     map: f => nums.map((n, i) => f([nums[i - 1] || 0, n, nums[i + 1] || 0], i)),
-    stamp: (x, y) => {
-      let stamp = DEFAULT_STAMP.slice();
+    isMoving: () => {
+      let n = nums[nums.length - 1];
+      let c = 0;
+      while (n !== 0) {
+        n &= (n - 1);
+        c++;
+      }
+
+      return c > 8;
+    },
+    stamp: (x, y, stamp = DEFAULT_STAMP) => {
+      stamp = stamp.slice();
       return nums.map((n, i) => {
         if (stamp.length > 0 && i >= x - 1) {
           return n ^ (stamp.pop() << y - 1);
