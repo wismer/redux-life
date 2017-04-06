@@ -61,16 +61,7 @@ export function BitWise(numbers) {
 export function BitMap(nums) {
   return {
     map: f => nums.map((n, i) => f([nums[i - 1] || 0, n, nums[i + 1] || 0], i)),
-    isMoving: () => {
-      let n = nums[nums.length - 1];
-      let c = 0;
-      while (n !== 0) {
-        n &= (n - 1);
-        c++;
-      }
-
-      return c > 8;
-    },
+    isMoving: () => bitCount(nums[nums.length - 1]) > 8,
     stamp: (x, y, stamp = DEFAULT_STAMP) => {
       stamp = stamp.slice();
       return nums.map((n, i) => {
